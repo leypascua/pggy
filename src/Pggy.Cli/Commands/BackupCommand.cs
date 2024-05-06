@@ -14,6 +14,7 @@ namespace Pggy.Cli.Commands
 {
     using Npgsql;
     using Pggy.Cli;
+    using System.Diagnostics;
 
     public static class BackupCommand
     {
@@ -68,6 +69,8 @@ namespace Pggy.Cli.Commands
                 .SetStdOut(console.Out);
 
             console.WriteLine("Performing backup...");
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
 
             using (var process = pgDump.Start())
             {
@@ -82,6 +85,8 @@ namespace Pggy.Cli.Commands
 
                 string stdout = await process.StandardOutput.ReadToEndAsync();
                 console.WriteLine(stdout);
+
+                console.WriteLine($"\r\nDone after {stopwatch.Elapsed.Humanize()}");
                 return ExitCodes.Success;
             }
         }

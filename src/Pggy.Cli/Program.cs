@@ -30,7 +30,7 @@ namespace Pggy.Cli
 
         private static void PrintBanner()
         {
-            Console.WriteLine("pggy: PSQL database backup and copy");
+            Console.WriteLine("\r\npggy: PSQL database backup and copy");
             Console.WriteLine("   Written by leypascua. All rights reserved.");
             Console.WriteLine();
         }
