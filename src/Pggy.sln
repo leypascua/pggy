@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pggy.Cli", "Pggy.Cli\Pggy.Cli.csproj", "{B324E5E9-49D5-425B-87DE-25687B6E9EDC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "conf", "conf", "{878888BF-D741-463F-94B4-37AC420119B3}"
+	ProjectSection(SolutionItems) = preProject
+		..\conf\appsettings.Development.json.dist = ..\conf\appsettings.Development.json.dist
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3575E31A-6A6E-4FF5-BCD6-42EF3750E42E}
+	EndGlobalSection
+EndGlobal

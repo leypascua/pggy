@@ -1,0 +1,10 @@
+{
+	"Postgres": {
+		"bin": "%PROGRAMFILES%\\Postgres\\10\\bin"
+	},
+
+	"ConnectionStrings": {
+		"psql_database_local": "Host=127.0.0.1; Port=5432; Database=psql_database_local; Username=postgres;",
+		"psql_database_remote": "Host=123.456.789.69; Port=5432; Database=psql_database_remote; Username=remoteuser;"
+	}
+}

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Pggy.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "backup --src martendb_migration --dest \"./backups\""
+    }
+  }
+}
