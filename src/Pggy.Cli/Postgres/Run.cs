@@ -31,7 +31,7 @@ namespace Pggy.Cli.Postgres
                 .Option("--no-password")
                 .Option("-d", csb.Database)
                 .Option("-Fp")
-                .Option("-Z", 6)
+                .Option("-Z", 9)
                 .Option("-f", $"\"{finalDumpPath}\"");
 
             bool isPasswordSet = false;

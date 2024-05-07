@@ -22,7 +22,7 @@ namespace Pggy.Cli.Infrastructure
 
             if (ts.TotalMinutes < 120)
             {
-                return $"{ts.TotalMinutes} minutes";
+                return string.Format("{0:%m} minutes {0:%s} seconds", ts);
             }
 
             return string.Format("{0:%h} hours {0:%m} minutes {0:%s} seconds", ts);
