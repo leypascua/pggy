@@ -13,26 +13,17 @@ namespace Pggy.Cli.Postgres
 
     public static class Run
     {
-        public static ChildProcessBuilder PgDump(string sourceDb, string destPath, IConfiguration config)
+        public static ChildProcessBuilder PgDump(NpgsqlConnectionStringBuilder csb, IConfiguration config)
         {
             var postgres = config.BindSectionAs<PostgresConfiguration>("Postgres");
-
-            string connectionString = config.GetConnectionString(sourceDb) ?? sourceDb;
-            var csb = new NpgsqlConnectionStringBuilder(connectionString);
-
-            string dumpDir = GetValidDestinationPath(destPath);
-            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.zip";
-            string finalDumpPath = Path.Combine(dumpDir, filename);
-
+            
             var builder = new ChildProcessBuilder(postgres.pg_dump())
                 .Option("-h", csb.Host)
                 .Option("-p", csb.Port)
                 .Option("-U", csb.Username)
                 .Option("--no-password")
                 .Option("-d", csb.Database)
-                .Option("-Fp")
-                .Option("-Z", 9)
-                .Option("-f", $"\"{finalDumpPath}\"");
+                .Option("-Fp");
 
             bool isPasswordSet = false;
 
@@ -48,20 +39,6 @@ namespace Pggy.Cli.Postgres
             }
 
             return builder;
-        }
-
-        private static string GetValidDestinationPath(string path)
-        {
-            string finalPath = Path.IsPathRooted(path) ?
-                path :
-                Path.Combine(Environment.CurrentDirectory, path);
-
-            if (!Directory.Exists(finalPath))
-            {
-                Directory.CreateDirectory(finalPath);
-            }
-
-            return finalPath;
         }
     }
 }

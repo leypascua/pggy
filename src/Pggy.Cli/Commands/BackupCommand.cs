@@ -15,6 +15,7 @@ namespace Pggy.Cli.Commands
     using Npgsql;
     using Pggy.Cli;
     using System.Diagnostics;
+    using System.IO.Compression;
 
     public static class BackupCommand
     {
@@ -50,14 +51,14 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> Execute(Inputs inputs, IConfiguration config, IConsole console)
         {
-            string sourceDb = GetConnectionString(inputs.SourceDb, config);
-            if (sourceDb == null)
+            var csb = GetConnectionString(inputs.SourceDb, config);
+            if (csb == null)
             {
-                console.Error.WriteLine($"Unable to resolve connection string.");
+                console.Error.WriteLine($"Unable to resolve a valid connection string.");
                 return ExitCodes.Error;
             }
 
-            var connectionError = await TryOpenConnection(sourceDb);
+            var connectionError = await TryOpenConnection(csb);
             if (connectionError != null)
             {
                 console.Error.WriteLine($"Unable to connect to database: [{inputs.SourceDb}]. Reason: {connectionError.Message}");
@@ -65,16 +66,36 @@ namespace Pggy.Cli.Commands
             }
 
             var pgDump = Postgres.Run
-                .PgDump(sourceDb, inputs.DestPath, config)
+                .PgDump(csb, config)
                 .SetStdOut(console.Out);
+
+            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.gz";
+            string dumpDir = GetValidDestinationPath(inputs.DestPath);
+            string finalDumpPath = Path.Combine(dumpDir, filename);
 
             console.WriteLine("Performing backup...");
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
+
+            using (FileStream outStream = File.Create(finalDumpPath))
+            using (var gzipStream = new GZipStream(outStream, CompressionLevel.SmallestSize))
             using (var process = pgDump.Start())
             {
-                await process.WaitForExitAsync();
+                var charBuffer = new char[1 * 1024 * 1024];
+
+                while (!process.HasExited)
+                {
+                    int charsRead = 0;
+                    while ((charsRead = await process.StandardOutput.ReadAsync(charBuffer, 0, charBuffer.Length)) > 0)
+                    {
+                        var byteBuffer = Encoding.UTF8.GetBytes(charBuffer, 0, charsRead);
+                        await gzipStream.WriteAsync(byteBuffer, 0, byteBuffer.Length);
+                        await gzipStream.FlushAsync();
+                    }
+                }
+                
+                gzipStream.Close();
 
                 if (process.ExitCode != ExitCodes.Success)
                 {
@@ -82,21 +103,31 @@ namespace Pggy.Cli.Commands
                     console.Error.WriteLine($"Backup failed. Reason: {stderr}");
                     return process.ExitCode;
                 }
-
-                string stdout = await process.StandardOutput.ReadToEndAsync();
-                console.WriteLine(stdout);
-
-                console.WriteLine($"\r\nDone after {stopwatch.Elapsed.Humanize()}");
-                return ExitCodes.Success;
             }
+
+            console.WriteLine($"\r\nDone after {stopwatch.Elapsed.Humanize()}");
+            return ExitCodes.Success;
         }
 
-        private static async Task<Exception> TryOpenConnection(string connectionString)
+        private static string GetValidDestinationPath(string path)
         {
-            var connStr = new NpgsqlConnectionStringBuilder(connectionString);
-            connStr.Timeout = 5;
+            string finalPath = Path.IsPathRooted(path) ?
+                path :
+                Path.Combine(Environment.CurrentDirectory, path);
 
-            using (var conn = new NpgsqlConnection(connStr.ToString()))
+            if (!Directory.Exists(finalPath))
+            {
+                Directory.CreateDirectory(finalPath);
+            }
+
+            return finalPath;
+        }
+
+        private static async Task<Exception> TryOpenConnection(NpgsqlConnectionStringBuilder connectionString)
+        {
+            connectionString.Timeout = 5;
+
+            using (var conn = new NpgsqlConnection(connectionString.ToString()))
             {
                 try
                 {
@@ -111,11 +142,13 @@ namespace Pggy.Cli.Commands
             }
         }
 
-        private static string GetConnectionString(string source, IConfiguration config)
+        private static NpgsqlConnectionStringBuilder GetConnectionString(string source, IConfiguration config)
         {
             string result = config.GetConnectionString(source);
 
-            return result == null ? source : result;
+            string connStr = result == null ? source : result;
+
+            return connStr == null ? null : new NpgsqlConnectionStringBuilder(connStr);
         }
 
         public class Inputs

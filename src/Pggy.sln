@@ -10,6 +10,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "conf", "conf", "{878888BF-D
 		..\conf\appsettings.Development.json.dist = ..\conf\appsettings.Development.json.dist
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ACD607E5-ADE8-4841-A04A-D4360B702B64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pggy.Tests.Unit", "..\tests\Pggy.Tests.Unit\Pggy.Tests.Unit.csproj", "{F1DE0608-8769-4D3B-88EA-9228A962D59F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,9 +24,16 @@ Global
 		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B324E5E9-49D5-425B-87DE-25687B6E9EDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1DE0608-8769-4D3B-88EA-9228A962D59F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1DE0608-8769-4D3B-88EA-9228A962D59F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1DE0608-8769-4D3B-88EA-9228A962D59F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1DE0608-8769-4D3B-88EA-9228A962D59F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F1DE0608-8769-4D3B-88EA-9228A962D59F} = {ACD607E5-ADE8-4841-A04A-D4360B702B64}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3575E31A-6A6E-4FF5-BCD6-42EF3750E42E}
