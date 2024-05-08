@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,13 @@ namespace Pggy.Cli.Infrastructure
             section.Bind(conf);
 
             return conf;
+        }
+
+        public static NpgsqlConnectionStringBuilder GetNpgsqlConnectionString(this IConfiguration config, string name)
+        {
+            string result = config.GetConnectionString(name);
+
+            return result == null ? null : new NpgsqlConnectionStringBuilder(result);
         }
     }
 }

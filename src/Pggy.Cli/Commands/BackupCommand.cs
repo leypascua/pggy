@@ -23,7 +23,7 @@ namespace Pggy.Cli.Commands
         {
             builder.AddCommand(sp =>
             {
-                // pggy backup --src hp_muppet_programsetupdb_live--dest "L:\PostgreSQLBackup\hp_muppet_programsetupdb_live"
+                // pggy backup --src hp_muppet_programsetupdb_live --dest "L:\PostgreSQLBackup\hp_muppet_programsetupdb_live"
                 var backup = new Command("backup", "Backup a source database into a file.");
 
                 var srcOpt = new Option<string>("--src", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
@@ -40,7 +40,7 @@ namespace Pggy.Cli.Commands
                         DestPath = context.ParseResult.GetValueForOption(destOpt)
                     };
 
-                    await Execute(inputs, sp.GetService<IConfiguration>(), context.Console);
+                    context.ExitCode = await Execute(inputs, sp.GetService<IConfiguration>(), context.Console);
                 });
 
                 return backup;
@@ -144,11 +144,9 @@ namespace Pggy.Cli.Commands
 
         private static NpgsqlConnectionStringBuilder GetConnectionString(string source, IConfiguration config)
         {
-            string result = config.GetConnectionString(source);
+            var npgsqlConnStr = config.GetNpgsqlConnectionString(source);
 
-            string connStr = result == null ? source : result;
-
-            return connStr == null ? null : new NpgsqlConnectionStringBuilder(connStr);
+            return npgsqlConnStr != null ? npgsqlConnStr : new NpgsqlConnectionStringBuilder(source);
         }
 
         public class Inputs

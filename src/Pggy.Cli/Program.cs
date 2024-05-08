@@ -21,7 +21,9 @@ namespace Pggy.Cli
                 .AddJsonFile("appsettings.json")
                 .AddJsonFile($"appsettings.{EnvironmentContext.Name}.json", optional: true);
 
-            builder.AddBackupCommand();
+            builder
+                .AddBackupCommand()
+                .AddRestoreCommand();
 
             var app = builder.Build();
 
