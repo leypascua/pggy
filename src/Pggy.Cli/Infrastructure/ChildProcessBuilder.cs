@@ -18,6 +18,8 @@ namespace Pggy.Cli.Infrastructure
         private IStandardStreamWriter _stdout;
         private Process _process = null;
         private bool disposedValue;
+        private bool _redirectStdin;
+        private bool _redirectStdOut;
 
         static ChildProcessBuilder()
         {
@@ -71,32 +73,43 @@ namespace Pggy.Cli.Infrastructure
             return this;
         }
 
+        public ChildProcessBuilder RedirectStdIn(bool val)
+        {
+            _redirectStdin = val;
+            return this;
+        }
+
+        public ChildProcessBuilder RedirectStdOut(bool val)
+        {
+            _redirectStdOut = val;
+            return this;
+        }
+
         public Process Start()
         {
-            _process = new Process 
-            { 
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = _path,
-                    Arguments = BuildArgsFrom(_options),
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
+            var psi = new ProcessStartInfo
+            {
+                FileName = _path,
+                Arguments = BuildArgsFrom(_options),
+                RedirectStandardInput = _redirectStdin,
+                RedirectStandardOutput = _redirectStdOut,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Normal,
+                CreateNoWindow = false
             };
 
             foreach (var v in _vars)
             {
-                _process.StartInfo.Environment.Add(v.Key, v.Value);
+                psi.Environment.Add(v.Key, v.Value);
             }
+
+            _process = Process.Start(psi);
 
             if (_stdout != null)
             {
                 _process.OutputDataReceived += OnProcessOutputReceived;
             }
-
-            _process.Start();
 
             return _process;
         }

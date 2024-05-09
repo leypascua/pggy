@@ -23,15 +23,38 @@ namespace Pggy.Cli.Postgres
                 .Option("-U", csb.Username)
                 .Option("--no-password")
                 .Option("-d", csb.Database)
-                .Option("-Fp");
+                .Option("-Fp")
+                .SetPassword(csb)
+                .RedirectStdOut(true);
 
+            return builder;
+        }
+
+        public static ChildProcessBuilder Psql(NpgsqlConnectionStringBuilder csb, IConfiguration config)
+        {
+            var postgres = config.BindSectionAs<PostgresConfiguration>("Postgres");
+
+            var builder = new ChildProcessBuilder(postgres.psql())
+                .Option("-h", csb.Host)
+                .Option("-p", csb.Port)
+                .Option("-U", csb.Username)
+                .Option("--no-password")
+                .Option("-d", csb.Database)
+                .SetPassword(csb)
+                .RedirectStdOut(false);
+
+            return builder;
+        }
+
+        private static ChildProcessBuilder SetPassword(this ChildProcessBuilder builder, NpgsqlConnectionStringBuilder csb)
+        {
             bool isPasswordSet = false;
 
             if (!string.IsNullOrEmpty(csb.Password) && string.IsNullOrEmpty(csb.Passfile))
             {
                 builder.SetVar("PGPASSWORD", csb.Password);
                 isPasswordSet = true;
-            }                
+            }
 
             if (!isPasswordSet && !string.IsNullOrEmpty(csb.Passfile) && File.Exists(csb.Passfile))
             {

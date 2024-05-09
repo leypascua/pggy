@@ -66,8 +66,7 @@ namespace Pggy.Cli.Commands
             }
 
             var pgDump = Postgres.Run
-                .PgDump(csb, config)
-                .SetStdOut(console.Out);
+                .PgDump(csb, config);
 
             string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.gz";
             string dumpDir = GetValidDestinationPath(inputs.DestPath);
