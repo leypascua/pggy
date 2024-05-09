@@ -23,7 +23,8 @@ namespace Pggy.Cli
 
             builder
                 .AddBackupCommand()
-                .AddRestoreCommand();
+                .AddRestoreCommand()
+                .AddCopyCommand();
 
             var app = builder.Build();
 
