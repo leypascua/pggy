@@ -14,6 +14,7 @@ namespace Pggy.Cli.Commands
 {
     using Npgsql;
     using Pggy.Cli;
+    using Pggy.Cli.Postgres;
     using System.Diagnostics;
     using System.IO.Compression;
 
@@ -23,7 +24,6 @@ namespace Pggy.Cli.Commands
         {
             builder.AddCommand(sp =>
             {
-                // pggy backup --src hp_muppet_programsetupdb_live --dest "L:\PostgreSQLBackup\hp_muppet_programsetupdb_live"
                 var backup = new Command("backup", "Backup a source database into a file.");
 
                 var srcOpt = new Option<string>("--src", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
@@ -51,11 +51,16 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> Execute(Inputs inputs, IConfiguration config, IConsole console)
         {
-            var csb = GetConnectionString(inputs.SourceDb, config);
+            var csb = config.GetNpgsqlConnectionString(inputs.SourceDb);
             if (csb == null)
             {
-                console.Error.WriteLine($"Unable to resolve a valid connection string.");
-                return ExitCodes.Error;
+                if (!inputs.SourceDb.IsValidConnectionString())
+                {
+                    console.Error.WriteLine($"  > Invalid connection string received: [{inputs.SourceDb}]");
+                    return ExitCodes.Error;
+                };
+
+                csb = new NpgsqlConnectionStringBuilder(inputs.SourceDb);
             }
 
             var connectionError = await TryOpenConnection(csb);
@@ -139,13 +144,6 @@ namespace Pggy.Cli.Commands
                     return ex;
                 }
             }
-        }
-
-        private static NpgsqlConnectionStringBuilder GetConnectionString(string source, IConfiguration config)
-        {
-            var npgsqlConnStr = config.GetNpgsqlConnectionString(source);
-
-            return npgsqlConnStr != null ? npgsqlConnStr : new NpgsqlConnectionStringBuilder(source);
         }
 
         public class Inputs

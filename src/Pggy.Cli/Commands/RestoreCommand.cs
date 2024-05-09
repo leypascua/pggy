@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pggy.Cli.Infrastructure;
+using Pggy.Cli.Postgres;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -17,6 +18,8 @@ namespace Pggy.Cli.Commands
 {
     public static class RestoreCommand
     {
+        const int BUFFER_SIZE = 1048576;
+
         public static ConsoleAppBuilder AddRestoreCommand(this ConsoleAppBuilder builder)
         {
             builder.AddCommand(sp =>
@@ -52,11 +55,16 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> Execute(Inputs inputs, IConfiguration config, IConsole console)
         {
-            var csb = config.GetNpgsqlConnectionString(inputs.TargetDb) ?? new Npgsql.NpgsqlConnectionStringBuilder(inputs.TargetDb);
+            var csb = config.GetNpgsqlConnectionString(inputs.TargetDb);
             if (csb == null)
             {
-                console.Error.WriteLine($"Unable to resolve a valid connection string.");
-                return ExitCodes.Error;
+                if (!inputs.TargetDb.IsValidConnectionString())
+                {
+                    console.Error.WriteLine($"  > Invalid connection string received: [{inputs.TargetDb}]");
+                    return ExitCodes.Error;
+                };
+
+                csb = new NpgsqlConnectionStringBuilder(inputs.TargetDb);
             }
 
             var dbDump = new FileInfo(inputs.DumpFile);
@@ -93,7 +101,7 @@ namespace Pggy.Cli.Commands
             using (var gzipStream = new GZipStream(dumpStream, CompressionMode.Decompress))
             using (var process = psql.Start())
             {
-                var readBuffer = new byte[512];
+                var readBuffer = new byte[BUFFER_SIZE];
                 int bytesRead = 0;
 
                 while ((bytesRead = gzipStream.Read(readBuffer, 0, readBuffer.Length)) > 0)
@@ -135,7 +143,7 @@ namespace Pggy.Cli.Commands
 
             connStr.Timeout = 5;
             connStr.Pooling = false;
-            connStr.Database = "postgres";
+            connStr.Database = Constants.DEFAULT_USER;
 
             using (var conn = new NpgsqlConnection(connStr.ToString()))
             {
