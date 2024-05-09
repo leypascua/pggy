@@ -48,6 +48,14 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> Execute(Inputs inputs, IConfiguration config, IConsole console)
         {
+            // get source connection string
+
+            // get destination connection string
+
+            // if source and destination DBs are on the same host, use `CREATE DATABASE {dest.Database} WITH TEMPLATE {source.Database} OWNER {dest.Username};`
+
+            // if source and destination are on different hosts, use PG_DUMP to pipe the source DB into the dest DB.
+
             console.Error.WriteLine("This command is not implemented.");
             return await Task.FromResult(ExitCodes.Error);
         }
