@@ -73,7 +73,7 @@ namespace Pggy.Cli.Commands
             var pgDump = Postgres.Run
                 .PgDump(csb, config);
 
-            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.gz";
+            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.br";
             string dumpDir = GetValidDestinationPath(inputs.DestPath);
             string finalDumpPath = Path.Combine(dumpDir, filename);
 
@@ -83,7 +83,7 @@ namespace Pggy.Cli.Commands
 
 
             using (FileStream outStream = File.Create(finalDumpPath))
-            using (var gzipStream = new GZipStream(outStream, CompressionLevel.SmallestSize))
+            using (var gzipStream = new BrotliStream(outStream, CompressionLevel.Optimal))
             using (var process = pgDump.Start())
             {
                 var charBuffer = new char[1 * 1024 * 1024];

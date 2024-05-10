@@ -2,7 +2,7 @@
   "profiles": {
     "Pggy.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "restore --dump \"./backups/martendb_migration.20240508T1055.sql.gz\" --target martendb_fromdump --force"
+      "commandLineArgs": "backup --src hp_muppet_programsetup_dev --dest \"c:/dbdumps\""
     }
   }
 }

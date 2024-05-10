@@ -18,7 +18,7 @@ namespace Pggy.Cli.Commands
 {
     public static class RestoreCommand
     {
-        const int BUFFER_SIZE = 1048576;
+        const int BUFFER_SIZE = 2097152;
 
         public static ConsoleAppBuilder AddRestoreCommand(this ConsoleAppBuilder builder)
         {
@@ -27,7 +27,7 @@ namespace Pggy.Cli.Commands
                 // pggy restore --dump "C:/dumpfile.sql.gz" --target hp_muppet_programsetupdb_live
                 var restore = new Command("restore", "Restore a (g)zipped archive plain text dump from pg_dump to a destination database");
 
-                var dumpOpt = new Option<string>("--dump", "[dbdump.sql.gz] A (g)zipped archive produced by pg_dump using the -Fp option.");
+                var dumpOpt = new Option<string>("--dump", "[dbdump.sql.gz | pgdump.sql.zip] A (g)zipped archive produced by pg_dump using the -Fp option.");
                 var targetOpt = new Option<string>("--target", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the target db");
                 var forceOpt = new Option<bool>("--force", "Perform the command right away, without delay");
 
@@ -98,13 +98,13 @@ namespace Pggy.Cli.Commands
             console.WriteLine($"  > Now restoring database [{csb.Database}] from dump [{dumpFile.Name}]...\r\n");
 
             using (FileStream dumpStream = dumpFile.OpenRead())
-            using (var gzipStream = new GZipStream(dumpStream, CompressionMode.Decompress))
+            using (var packageStream = PackageStream.Open(dumpStream))
             using (var process = psql.Start())
             {
                 var readBuffer = new byte[BUFFER_SIZE];
                 int bytesRead = 0;
 
-                while ((bytesRead = gzipStream.Read(readBuffer, 0, readBuffer.Length)) > 0)
+                while ((bytesRead = packageStream.Read(readBuffer, 0, readBuffer.Length)) > 0)
                 {
                     string content = Encoding.UTF8.GetString(readBuffer, 0, bytesRead);
 
@@ -115,8 +115,8 @@ namespace Pggy.Cli.Commands
                         return ExitCodes.Error;
                     }
 
-                    process.StandardInput.Write(content);
-                    process.StandardInput.Flush();
+                    await process.StandardInput.WriteAsync(content);
+                    await process.StandardInput.FlushAsync();
                 }
 
                 if (!process.HasExited)
