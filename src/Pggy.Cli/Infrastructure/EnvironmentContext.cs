@@ -20,5 +20,7 @@ namespace Pggy.Cli.Infrastructure
                 return result;
             }
         }
+
+        public static bool IsDevelopment() => Name == Environments.Development;
     }
 }

@@ -24,7 +24,6 @@ namespace Pggy.Cli.Commands
         {
             builder.AddCommand(sp =>
             {
-                // pggy restore --dump "C:/dumpfile.sql.gz" --target hp_muppet_programsetupdb_live
                 var restore = new Command("restore", "Restore a (g)zipped archive plain text dump from pg_dump to a destination database");
 
                 var dumpOpt = new Option<string>("--dump", "[dbdump.sql.gz | pgdump.sql.zip] A (g)zipped archive produced by pg_dump using the -Fp option.");
@@ -55,16 +54,13 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> Execute(Inputs inputs, IConfiguration config, IConsole console)
         {
-            var csb = config.GetNpgsqlConnectionString(inputs.TargetDb);
+            var csb = new NpgsqlConnectionStringBuilderFactory(config)
+                .CreateBuilderFrom(inputs.TargetDb);
+
             if (csb == null)
             {
-                if (!inputs.TargetDb.IsValidConnectionString())
-                {
-                    console.Error.WriteLine($"  > Invalid connection string received: [{inputs.TargetDb}]");
-                    return ExitCodes.Error;
-                };
-
-                csb = new NpgsqlConnectionStringBuilder(inputs.TargetDb);
+                console.Error.WriteLine($"  > Invalid connection string received: [{inputs.TargetDb}]");
+                return ExitCodes.Error;
             }
 
             var dbDump = new FileInfo(inputs.DumpFile);
@@ -77,7 +73,7 @@ namespace Pggy.Cli.Commands
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            bool isDatabaseDropped = await DropDatabase(csb, console, inputs.IsForced);
+            bool isDatabaseDropped = await csb.DropDatabase(console, inputs.IsForced);
             if (!isDatabaseDropped)
             {
                 return ExitCodes.Success;
@@ -135,46 +131,6 @@ namespace Pggy.Cli.Commands
             }
 
             return ExitCodes.Success;
-        }
-
-        private static async Task<bool> DropDatabase(NpgsqlConnectionStringBuilder csb, IConsole console, bool isForced = false)
-        {
-            var connStr = new NpgsqlConnectionStringBuilder(csb.ToString());
-
-            connStr.Timeout = 5;
-            connStr.Pooling = false;
-            connStr.Database = Constants.DEFAULT_USER;
-
-            using (var conn = new NpgsqlConnection(connStr.ToString()))
-            {
-                conn.Open();
-
-                if (!isForced)
-                {
-                    console.WriteLine($"*** WARNING! This destructive command will drop the database [{csb.Database}] on server [{csb.Host}] which cannot be reversed. Press [CTRL+C] now to abort...\r\n");
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }
-
-                console.WriteLine($"  > Dropping database [{csb.Database}]...");
-
-                // kill processes
-                var killCmd = conn.CreateCommand();
-                killCmd.CommandText = typeof(RestoreCommand).Assembly.GetManifestResourceString("Pggy.Cli.Resources.killprocesses.command.sql");
-                killCmd.Parameters.Add(new() { ParameterName = "dbName", Value = csb.Database });
-                await killCmd.ExecuteNonQueryAsync();
-
-                // drop database
-                var dropCmd = conn.CreateCommand();
-                dropCmd.CommandText = $"DROP DATABASE IF EXISTS {csb.Database};";
-                await dropCmd.ExecuteNonQueryAsync();
-
-                // create database
-                var createCmd = conn.CreateCommand();
-                createCmd.CommandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username};";
-                await createCmd.ExecuteNonQueryAsync();
-
-                return true;
-            }
         }
 
         public class Inputs

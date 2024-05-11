@@ -2,7 +2,7 @@
   "profiles": {
     "Pggy.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "backup --src hp_muppet_programsetup_dev --dest \"c:/dbdumps\""
+      "commandLineArgs": "copy --source martendb_migration --dest martendb_fromdump --dump \"C:/dbdumps\""
     }
   }
 }

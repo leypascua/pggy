@@ -51,16 +51,13 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> Execute(Inputs inputs, IConfiguration config, IConsole console)
         {
-            var csb = config.GetNpgsqlConnectionString(inputs.SourceDb);
+            var csb = new NpgsqlConnectionStringBuilderFactory(config)
+                .CreateBuilderFrom(inputs.SourceDb);
+
             if (csb == null)
             {
-                if (!inputs.SourceDb.IsValidConnectionString())
-                {
-                    console.Error.WriteLine($"  > Invalid connection string received: [{inputs.SourceDb}]");
-                    return ExitCodes.Error;
-                };
-
-                csb = new NpgsqlConnectionStringBuilder(inputs.SourceDb);
+                console.Error.WriteLine($"  > Invalid connection string received: [{inputs.SourceDb}]");
+                return ExitCodes.Error;
             }
 
             var connectionError = await TryOpenConnection(csb);
@@ -74,11 +71,11 @@ namespace Pggy.Cli.Commands
                 .PgDump(csb, config);
 
             string ext = inputs.CompressionMethod.ToString().ToLowerInvariant();
-            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.{ext}";
+            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddTHHmm")}.sql.{ext}";
             string dumpDir = GetValidDestinationPath(inputs.DestPath);
             string finalDumpPath = Path.Combine(dumpDir, filename);
 
-            console.WriteLine($"Starting pg_dump on database [{csb.Database}] on host= [{csb.Host}]...");
+            console.WriteLine($"Starting pg_dump on database [{csb.Database}] from host [{csb.Host}]...");
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -87,7 +84,7 @@ namespace Pggy.Cli.Commands
             using (var packageStream = PackageStream.CreateWith(outStream))
             using (var process = pgDump.Start())
             {
-                var charBuffer = new char[1 * 1024 * 1024];
+                var charBuffer = new char[1024 * 1024];
 
                 while (!process.HasExited)
                 {
