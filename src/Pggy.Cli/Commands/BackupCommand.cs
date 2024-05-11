@@ -28,16 +28,20 @@ namespace Pggy.Cli.Commands
 
                 var srcOpt = new Option<string>("--src", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
                 var destOpt = new Option<string>("--dest", "The destination path of the resulting DB dump file that can be used with the psql CLI.");
+                var compOpt = new Option<CompressionMethod>("--compression", "[gz | br] Optional. The compression method to use. Defaults to [gz]ip. Use [br]otli for best results");
+                compOpt.SetDefaultValue("gz");
 
                 backup.AddOption(srcOpt);
                 backup.AddOption(destOpt);
+                backup.AddOption(compOpt);
 
                 backup.SetHandler(async (context) =>
                 {
                     var inputs = new Inputs
                     {
                         SourceDb = context.ParseResult.GetValueForOption(srcOpt),
-                        DestPath = context.ParseResult.GetValueForOption(destOpt)
+                        DestPath = context.ParseResult.GetValueForOption(destOpt),
+                        CompressionMethod = context.ParseResult.GetValueForOption(compOpt),
                     };
 
                     context.ExitCode = await Execute(inputs, sp.GetService<IConfiguration>(), context.Console);
@@ -73,17 +77,18 @@ namespace Pggy.Cli.Commands
             var pgDump = Postgres.Run
                 .PgDump(csb, config);
 
-            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.br";
+            string ext = inputs.CompressionMethod.ToString().ToLowerInvariant();
+            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddThhmm")}.sql.{ext}";
             string dumpDir = GetValidDestinationPath(inputs.DestPath);
             string finalDumpPath = Path.Combine(dumpDir, filename);
 
-            console.WriteLine("Performing backup...");
+            console.WriteLine($"Starting pg_dump on database [{csb.Database}] on host= [{csb.Host}]...");
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
 
             using (FileStream outStream = File.Create(finalDumpPath))
-            using (var gzipStream = new BrotliStream(outStream, CompressionLevel.Optimal))
+            using (var packageStream = PackageStream.CreateWith(outStream))
             using (var process = pgDump.Start())
             {
                 var charBuffer = new char[1 * 1024 * 1024];
@@ -94,12 +99,12 @@ namespace Pggy.Cli.Commands
                     while ((charsRead = await process.StandardOutput.ReadAsync(charBuffer, 0, charBuffer.Length)) > 0)
                     {
                         var byteBuffer = Encoding.UTF8.GetBytes(charBuffer, 0, charsRead);
-                        await gzipStream.WriteAsync(byteBuffer, 0, byteBuffer.Length);
-                        await gzipStream.FlushAsync();
+                        await packageStream.WriteAsync(byteBuffer, 0, byteBuffer.Length);
+                        await packageStream.FlushAsync();
                     }
                 }
                 
-                gzipStream.Close();
+                packageStream.Close();
 
                 if (process.ExitCode != ExitCodes.Success)
                 {
@@ -146,10 +151,17 @@ namespace Pggy.Cli.Commands
             }
         }
 
+        public enum CompressionMethod
+        {
+            gz = 0,
+            br = 1
+        }
+
         public class Inputs
         {
             public string SourceDb { get; set; }
             public string DestPath { get; set; }
+            public CompressionMethod CompressionMethod { get; set; }
         }
     }
 }

@@ -10,19 +10,43 @@ namespace Pggy.Cli.Infrastructure
 {
     public static class PackageStream
     {
+        const string GZ = ".gz";
+        const string BR = ".br";
+        const string SQL = ".sql";
+
+        public static Stream CreateWith(FileStream file)
+        {
+            string extension = Path.GetExtension(file.Name);
+            
+            switch (extension)
+            {
+                case GZ:
+                    return new GZipStream(file, CompressionLevel.SmallestSize);
+
+                case BR:
+                    return new BrotliStream(file, CompressionLevel.Optimal);
+
+                case SQL:
+                    return file;
+
+                default:
+                    throw new NotSupportedException($"Unsupported file type detected: [{extension}]");
+            }
+        }
+
         public static Stream Open(FileStream file)
         {
             string extension = Path.GetExtension(file.Name);
 
             switch (extension)
             {
-                case ".gz":
+                case GZ:
                     return new GZipStream(file, CompressionMode.Decompress);
 
-                case ".br":
+                case BR:
                     return new BrotliStream(file, CompressionMode.Decompress);
 
-                case ".sql":
+                case SQL:
                     return file;
 
                 default:
