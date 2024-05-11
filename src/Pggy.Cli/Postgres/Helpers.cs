@@ -26,10 +26,16 @@ namespace Pggy.Cli.Postgres
         public static async Task<bool> DropAndCreateDatabase(this NpgsqlConnectionStringBuilder csb, IConsole console, bool isForced = false, string withTemplateDbName = null)
         {
             var connStr = new NpgsqlConnectionStringBuilder(csb.ToString());
+            bool useTemplate = !string.IsNullOrEmpty(withTemplateDbName);
 
             connStr.Timeout = 5;
             connStr.Pooling = false;
             connStr.Database = withTemplateDbName ?? Constants.DEFAULT_USER;
+
+            if (useTemplate)
+            {
+                connStr.CommandTimeout = 0;
+            }
 
             using (var conn = new NpgsqlConnection(connStr.ToString()))
             {
@@ -52,7 +58,7 @@ namespace Pggy.Cli.Postgres
                 dropCmd.CommandText = $"DROP DATABASE IF EXISTS {csb.Database};";
                 await dropCmd.ExecuteNonQueryAsync();
 
-                bool useTemplate = !string.IsNullOrEmpty(withTemplateDbName);
+
                 string template = string.Empty;
 
                 if (useTemplate)
