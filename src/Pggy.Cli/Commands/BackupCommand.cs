@@ -2,21 +2,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Pggy.Cli.Infrastructure;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Pggy.Cli.Commands
 {
     using Npgsql;
-    using Pggy.Cli;
     using Pggy.Cli.Postgres;
     using System.Diagnostics;
-    using System.IO.Compression;
 
     public static class BackupCommand
     {
