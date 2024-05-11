@@ -73,7 +73,7 @@ namespace Pggy.Cli.Commands
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            bool isDatabaseDropped = await csb.DropDatabase(console, inputs.IsForced);
+            bool isDatabaseDropped = await csb.DropAndCreateDatabase(console, inputs.IsForced);
             if (!isDatabaseDropped)
             {
                 return ExitCodes.Success;

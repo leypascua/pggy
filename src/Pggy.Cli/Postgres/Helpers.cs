@@ -23,13 +23,13 @@ namespace Pggy.Cli.Postgres
             return buildHost(first) == buildHost(second);
         }
 
-        public static async Task<bool> DropDatabase(this NpgsqlConnectionStringBuilder csb, IConsole console, bool isForced = false)
+        public static async Task<bool> DropAndCreateDatabase(this NpgsqlConnectionStringBuilder csb, IConsole console, bool isForced = false, string withTemplateDbName = null)
         {
             var connStr = new NpgsqlConnectionStringBuilder(csb.ToString());
 
             connStr.Timeout = 5;
             connStr.Pooling = false;
-            connStr.Database = Constants.DEFAULT_USER;
+            connStr.Database = withTemplateDbName ?? Constants.DEFAULT_USER;
 
             using (var conn = new NpgsqlConnection(connStr.ToString()))
             {
@@ -37,30 +37,47 @@ namespace Pggy.Cli.Postgres
 
                 if (!isForced)
                 {
-                    console.WriteLine($"  *** WARNING! This destructive command will drop the database [{csb.Database}] on server [{csb.Host}] which cannot be reversed. Press [CTRL+C] now to abort...\r\n");
+                    console.WriteLine($"  *** WARNING! This destructive command will drop the database [{csb.Database}] on server [{csb.Host}]");
+                    console.WriteLine($"      This operation is irreversible. Press [CTRL+C] now to abort...\r\n");
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }
 
                 console.WriteLine($"  > Dropping database [{csb.Database}]...");
 
                 // kill processes
-                var killCmd = conn.CreateCommand();
-                killCmd.CommandText = typeof(RestoreCommand).Assembly.GetManifestResourceString("Pggy.Cli.Resources.killprocesses.command.sql");
-                killCmd.Parameters.Add(new() { ParameterName = "dbName", Value = csb.Database });
-                await killCmd.ExecuteNonQueryAsync();
+                await KillDbProcesses(csb.Database, conn);
 
                 // drop database
                 var dropCmd = conn.CreateCommand();
                 dropCmd.CommandText = $"DROP DATABASE IF EXISTS {csb.Database};";
                 await dropCmd.ExecuteNonQueryAsync();
 
+                bool useTemplate = !string.IsNullOrEmpty(withTemplateDbName);
+                string template = string.Empty;
+
+                if (useTemplate)
+                {
+                    await KillDbProcesses(withTemplateDbName, conn);
+                    template = $" TEMPLATE {withTemplateDbName}";
+                }
+
                 // create database
                 var createCmd = conn.CreateCommand();
-                createCmd.CommandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username};";
+                string commandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username}{template};";
+                console.WriteLine($"  > {commandText}");
+                createCmd.CommandText = commandText;
                 await createCmd.ExecuteNonQueryAsync();
 
                 return true;
             }
+        }
+
+        private static async Task KillDbProcesses(string dbName, NpgsqlConnection conn)
+        {
+            var killCmd = conn.CreateCommand();
+            killCmd.CommandText = typeof(RestoreCommand).Assembly.GetManifestResourceString("Pggy.Cli.Resources.killprocesses.command.sql");
+            killCmd.Parameters.Add(new() { ParameterName = "dbName", Value = dbName });
+            await killCmd.ExecuteNonQueryAsync();
         }
     }
 }

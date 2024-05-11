@@ -113,7 +113,7 @@ namespace Pggy.Cli.Commands
                 .Psql(destDb, config)
                 .RedirectStdIn(true);
 
-            await destDb.DropDatabase(console, inputs.IsForced);
+            await destDb.DropAndCreateDatabase(console, inputs.IsForced);
 
             using (var pgDumpPid = pgDump.Start())
             using (var psqlPid = psql.Start())
@@ -144,8 +144,15 @@ namespace Pggy.Cli.Commands
         {
             // use `CREATE DATABASE {dest.Database} WITH TEMPLATE {source.Database} OWNER {dest.Username};`
 
-            // for now, only CopyWithPgDump is supported.
-            return await CopyWithPgDump(sourceDb, destDb, inputs, config, console);
+            if (sourceDb.Username != sourceDb.Username)
+            {
+                console.WriteLine("  > Unable to perform COPY on the same host when PSQL logins of source and destination databases are different.");
+                return ExitCodes.Error;
+            }
+
+            await destDb.DropAndCreateDatabase(console, inputs.IsForced, withTemplateDbName: sourceDb.Database);
+
+            return ExitCodes.Success;
         }
 
         class PgDumpFile : IDisposable
