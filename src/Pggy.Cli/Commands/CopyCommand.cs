@@ -24,7 +24,7 @@ namespace Pggy.Cli.Commands
             {
                 var restore = new Command("copy", "Copy a source database into a destination database");
 
-                var sourceOpt = new Option<string>("--source", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
+                var sourceOpt = new Option<string>("--src", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
                 var destOpt = new Option<string>("--dest", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the destination db");
                 var dumpOpt = new Option<string>("--dump", "[/path/to/dump] Optional. The destination path of the database dump file that can be used to restore the copied database elsewhere. Only works when source and dest are in separate hosts.");
                 var forceOpt = new Option<bool>("--force", "Perform the command right away, without delay");

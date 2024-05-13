@@ -24,7 +24,7 @@ namespace Pggy.Cli.Commands
 
                 var srcOpt = new Option<string>("--src", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
                 var destOpt = new Option<string>("--dest", "The destination path of the resulting DB dump file that can be used with the psql CLI.");
-                var compOpt = new Option<CompressionMethod>("--compression", "[gz | br] Optional. The compression method to use. Defaults to [gz]ip. Use [br]otli for best results");
+                var compOpt = new Option<CompressionMethod>("--compression", "[gz | br] Optional. The compression method ([gz]ip or [br]otli to use. Use [br]otli for best results");
                 compOpt.SetDefaultValue("gz");
 
                 backup.AddOption(srcOpt);
