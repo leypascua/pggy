@@ -11,14 +11,17 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace Pggy.Cli.Commands
 {
     public static class RestoreCommand
     {
-        const int BUFFER_SIZE = 2097152;
+        const int BUFFER_SIZE = 2048;
 
         public static ConsoleAppBuilder AddRestoreCommand(this ConsoleAppBuilder builder)
         {
@@ -89,7 +92,8 @@ namespace Pggy.Cli.Commands
         {
             var psql = Postgres.Run
                 .Psql(csb, config)
-                .RedirectStdIn(true);
+                .RedirectStdIn(true)
+                .SetStdErr(null);
 
             console.WriteLine($"  > Now restoring database [{csb.Database}] from dump [{dumpFile.Name}]...\r\n");
 
@@ -112,9 +116,8 @@ namespace Pggy.Cli.Commands
                     }
 
                     await process.StandardInput.WriteAsync(content);
-                    await process.StandardInput.FlushAsync();
                 }
-
+                
                 if (!process.HasExited)
                 {
                     await process.StandardInput.WriteLineAsync("\\q");
@@ -124,8 +127,6 @@ namespace Pggy.Cli.Commands
 
                 if (process.ExitCode != ExitCodes.Success)
                 {
-                    string stderr = await process.StandardError.ReadToEndAsync();
-                    console.Error.WriteLine($"Restore failed. Reason: {stderr}");
                     return process.ExitCode;
                 }
             }

@@ -111,7 +111,8 @@ namespace Pggy.Cli.Commands
 
             var psql = Postgres.Run
                 .Psql(destDb, config)
-                .RedirectStdIn(true);
+                .RedirectStdIn(true)
+                .SetStdOut(null);
 
             await destDb.DropAndCreateDatabase(console, inputs.IsForced);
 
@@ -119,16 +120,14 @@ namespace Pggy.Cli.Commands
             using (var psqlPid = psql.Start())
             using (var dumpFile = new PgDumpFile(sourceDb.Database, inputs.DumpPath))
             {
-                var charBuffer = new char[1024 * 1024];
+                var charBuffer = new char[1024];
                 int charsRead = 0;
 
                 while ((charsRead = await pgDumpPid.StandardOutput.ReadAsync(charBuffer, 0, charBuffer.Length)) > 0)
                 {
                     if (psqlPid.HasExited)
                     {
-                        string psqlErr = psqlPid.StandardError.ReadToEnd();
-                        string reason = (psqlErr ?? string.Empty).Length > 0 ? $" Reason: {psqlErr}" : string.Empty;
-                        console.Error.WriteLine($"PSQL process terminated unexpectedly." + reason);
+                        console.Error.WriteLine($"PSQL process terminated unexpectedly.");
                         return psqlPid.ExitCode;
                     }
 

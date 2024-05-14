@@ -16,10 +16,12 @@ namespace Pggy.Cli.Infrastructure
         private readonly Dictionary<string, string> _options = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _vars = new Dictionary<string, string>();
         private IStandardStreamWriter _stdout;
+        private IStandardStreamWriter _stderr;
         private Process _process = null;
         private bool disposedValue;
         private bool _redirectStdin;
         private bool _redirectStdOut;
+        private bool _redirectStdErr;
 
         static ChildProcessBuilder()
         {
@@ -69,6 +71,7 @@ namespace Pggy.Cli.Infrastructure
         }
         public ChildProcessBuilder SetStdOut(IStandardStreamWriter stdout)
         {
+            _redirectStdOut = stdout != null;
             _stdout = stdout;
             return this;
         }
@@ -85,6 +88,13 @@ namespace Pggy.Cli.Infrastructure
             return this;
         }
 
+        public ChildProcessBuilder SetStdErr(IStandardStreamWriter stderr)
+        {
+            _redirectStdErr = stderr != null;
+            _stderr = stderr;
+            return this;
+        }
+
         public Process Start()
         {
             var psi = new ProcessStartInfo
@@ -93,10 +103,12 @@ namespace Pggy.Cli.Infrastructure
                 Arguments = BuildArgsFrom(_options),
                 RedirectStandardInput = _redirectStdin,
                 RedirectStandardOutput = _redirectStdOut,
-                RedirectStandardError = true,
+                RedirectStandardError = _redirectStdErr,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Normal,
-                CreateNoWindow = false
+                CreateNoWindow = false,
+                StandardOutputEncoding = _redirectStdOut ? Encoding.UTF8 : null,
+                StandardInputEncoding = _redirectStdin ?  Encoding.UTF8 : null
             };
 
             foreach (var v in _vars)
@@ -104,14 +116,27 @@ namespace Pggy.Cli.Infrastructure
                 psi.Environment.Add(v.Key, v.Value);
             }
 
-            _process = Process.Start(psi);
+            _process = new Process { StartInfo = psi };
 
             if (_stdout != null)
             {
                 _process.OutputDataReceived += OnProcessOutputReceived;
             }
 
+            if (_stderr != null)
+            {
+                _process.ErrorDataReceived += OnProcessErrorReceived;
+            }
+
+            _process.Start();
+
             return _process;
+        }
+
+        private void OnProcessErrorReceived(object sender, DataReceivedEventArgs e)
+        {
+            if (_stderr == null) return;
+            _stderr.Write(e.Data);
         }
 
         private void OnProcessOutputReceived(object sender, DataReceivedEventArgs e)

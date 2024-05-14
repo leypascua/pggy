@@ -2,7 +2,7 @@
   "profiles": {
     "Pggy.Cli": {
       "commandName": "Project",
-      "commandLineArgs": "copy --source martendb_migration --dest martendb_fromdump --dump \"C:/dbdumps\""
+      "commandLineArgs": "restore --dump \"E:\\databases\\\\hp_muppet_programsetup_stage.20240514T0859.sql.br\" --target hp_muppet_programsetup_live_bak --force"
     }
   }
 }

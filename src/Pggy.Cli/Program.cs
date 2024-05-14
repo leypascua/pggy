@@ -1,6 +1,8 @@
 ﻿using System;
 using System.CommandLine;
+using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Pggy.Cli.Commands;
@@ -33,6 +35,10 @@ namespace Pggy.Cli
 
         private static void PrintBanner()
         {
+            var en_US = new CultureInfo("en-US");
+            Thread.CurrentThread.CurrentCulture = en_US;
+            Thread.CurrentThread.CurrentUICulture = en_US;
+
             Console.WriteLine("\r\npggy: PSQL database backup and copy");
             Console.WriteLine("   Written by leypascua. All rights reserved.");
             Console.WriteLine();
