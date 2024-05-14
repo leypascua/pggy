@@ -21,7 +21,7 @@ namespace Pggy.Cli.Commands
 {
     public static class RestoreCommand
     {
-        const int BUFFER_SIZE = 2048;
+        const int BUFFER_SIZE = 1024 * 1024;
 
         public static ConsoleAppBuilder AddRestoreCommand(this ConsoleAppBuilder builder)
         {
