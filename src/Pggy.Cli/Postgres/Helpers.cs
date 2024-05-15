@@ -48,41 +48,39 @@ namespace Pggy.Cli.Postgres
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }
 
-                console.WriteLine($"  > Dropping database [{csb.Database}]...");
-
                 // kill processes
-                await KillDbProcesses(csb.Database, conn);
+                await KillOpenConnections(csb.Database, conn, console);
 
                 // drop database
                 var dropCmd = conn.CreateCommand();
                 dropCmd.CommandText = $"DROP DATABASE IF EXISTS {csb.Database};";
+                console.WriteLine($"  > {dropCmd.CommandText}");
                 await dropCmd.ExecuteNonQueryAsync();
-
 
                 string template = string.Empty;
 
                 if (useTemplate)
                 {
-                    await KillDbProcesses(withTemplateDbName, conn);
+                    await KillOpenConnections(withTemplateDbName, conn, console);
                     template = $" TEMPLATE {withTemplateDbName}";
                 }
 
                 // create database
                 var createCmd = conn.CreateCommand();
-                string commandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username}{template};";
-                console.WriteLine($"  > {commandText}");
-                createCmd.CommandText = commandText;
+                createCmd.CommandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username}{template};"; ;
+                console.WriteLine($"  > {createCmd.CommandText}");
                 await createCmd.ExecuteNonQueryAsync();
 
                 return true;
             }
         }
 
-        private static async Task KillDbProcesses(string dbName, NpgsqlConnection conn)
+        private static async Task KillOpenConnections(string dbName, NpgsqlConnection conn, IConsole console)
         {
             var killCmd = conn.CreateCommand();
             killCmd.CommandText = typeof(RestoreCommand).Assembly.GetManifestResourceString("Pggy.Cli.Resources.killprocesses.command.sql");
             killCmd.Parameters.Add(new() { ParameterName = "dbName", Value = dbName });
+            console.WriteLine($"  > Killing open connections to database [{dbName}]...");
             await killCmd.ExecuteNonQueryAsync();
         }
     }
