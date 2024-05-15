@@ -120,7 +120,7 @@ namespace Pggy.Cli.Commands
             using (var psqlPid = psql.Start())
             using (var dumpFile = new PgDumpFile(sourceDb.Database, inputs.DumpPath))
             {
-                var charBuffer = new char[1024];
+                var charBuffer = new char[1024 * 1024];
                 int charsRead = 0;
 
                 while ((charsRead = await pgDumpPid.StandardOutput.ReadAsync(charBuffer, 0, charBuffer.Length)) > 0)
