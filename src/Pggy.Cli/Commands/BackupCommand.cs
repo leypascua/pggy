@@ -84,7 +84,7 @@ namespace Pggy.Cli.Commands
             using (var packageStream = PackageStream.CreateWith(outStream))
             using (var process = pgDump.Start())
             {
-                var charBuffer = new char[1024 * 1024];
+                var charBuffer = new char[Constants.PGDUMP_READ_BUFFER_SIZE];
 
                 while (!process.HasExited)
                 {
