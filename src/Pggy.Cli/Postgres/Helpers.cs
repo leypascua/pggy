@@ -67,8 +67,8 @@ namespace Pggy.Cli.Postgres
 
                 // create database
                 var createCmd = conn.CreateCommand();
-                createCmd.CommandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username}{template}; COMMENT ON DATABASE {csb.Database} IS 'Created by pggy CLI on {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")} UTC. Triggered by user [{Environment.UserName}]';";
-                console.WriteLine($"  > {createCmd.CommandText}");
+                createCmd.CommandText = $"CREATE DATABASE {csb.Database} WITH OWNER {csb.Username}{template}; COMMENT ON DATABASE {csb.Database} IS 'Created by pggy CLI on {DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")} UTC. Triggered by user [{Environment.UserName}]. {template}';";
+                console.WriteLine($"  > CREATE DATABASE {csb.Database};");
                 await createCmd.ExecuteNonQueryAsync();
 
                 return true;

@@ -152,7 +152,6 @@ namespace Pggy.Cli.Commands
                             process.Dispose();
                         }
                     }
-                    
                 }
             }
 
