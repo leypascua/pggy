@@ -90,44 +90,69 @@ namespace Pggy.Cli.Commands
 
         private static async Task<int> RestoreFromDump(FileInfo dumpFile, NpgsqlConnectionStringBuilder csb, IConfiguration config, IConsole console)
         {
-            var psql = Postgres.Run
-                .Psql(csb, config)
-                .RedirectStdIn(true)
-                .SetStdErr(null);
-
-            console.WriteLine($"  > Now restoring database [{csb.Database}] from dump [{dumpFile.Name}]...\r\n");
-
             using (FileStream dumpStream = dumpFile.OpenRead())
             using (var packageStream = PackageStream.Open(dumpStream))
-            using (var process = psql.Start())
             {
-                var readBuffer = new byte[BUFFER_SIZE];
-                int bytesRead = 0;
+                Process process = null;
 
-                while ((bytesRead = packageStream.Read(readBuffer, 0, readBuffer.Length)) > 0)
+                try
                 {
-                    string content = Encoding.UTF8.GetString(readBuffer, 0, bytesRead);
+                    console.WriteLine($"  > Now restoring database [{csb.Database}] from dump [{dumpFile.Name}]...\r\n");
 
-                    if (process.HasExited)
+                    var psql = Postgres.Run
+                        .Psql(csb, config)
+                        .RedirectStdIn(true)
+                        .SetStdErr(console.Error);
+
+                    process = psql.Start();
+
+                    var readBuffer = new byte[BUFFER_SIZE];
+                    int bytesRead = 0;
+
+                    while ((bytesRead = packageStream.Read(readBuffer, 0, readBuffer.Length)) > 0)
                     {
-                        string errorMessage = await process.StandardError.ReadToEndAsync();
-                        console.Error.WriteLine("  > ERROR: Process has terminated. REASON: " + errorMessage);
-                        return ExitCodes.Error;
+                        string content = Encoding.UTF8.GetString(readBuffer, 0, bytesRead);
+
+                        if (process.HasExited)
+                        {
+                            string errorMessage = await process.StandardError.ReadToEndAsync();
+                            console.Error.WriteLine("  > ERROR: Process has terminated. REASON: " + errorMessage);
+                            return ExitCodes.Error;
+                        }
+
+                        await process.StandardInput.WriteAsync(content);
                     }
 
-                    await process.StandardInput.WriteAsync(content);
-                }
-                
-                if (!process.HasExited)
-                {
-                    await process.StandardInput.WriteLineAsync("\\q");
-                }
+                    if (!process.HasExited)
+                    {
+                        await process.StandardInput.WriteLineAsync("\\q");
+                    }
 
-                await process.WaitForExitAsync();
+                    await process.WaitForExitAsync();
 
-                if (process.ExitCode != ExitCodes.Success)
+                    if (process.ExitCode != ExitCodes.Success)
+                    {
+                        return process.ExitCode;
+                    }
+                }
+                finally
                 {
-                    return process.ExitCode;
+                    if (process != null)
+                    {
+                        try
+                        {
+                            if (!process.HasExited)
+                            {
+                                process.Kill();
+                            }
+                        }
+                        catch { /* Pokemon! */ }
+                        finally
+                        {
+                            process.Dispose();
+                        }
+                    }
+                    
                 }
             }
 

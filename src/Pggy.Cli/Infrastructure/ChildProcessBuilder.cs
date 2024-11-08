@@ -101,12 +101,12 @@ namespace Pggy.Cli.Infrastructure
             {
                 FileName = _path,
                 Arguments = BuildArgsFrom(_options),
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
                 RedirectStandardInput = _redirectStdin,
                 RedirectStandardOutput = _redirectStdOut,
                 RedirectStandardError = _redirectStdErr,
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Normal,
-                CreateNoWindow = false,
                 StandardOutputEncoding = _redirectStdOut ? Encoding.UTF8 : null,
                 StandardInputEncoding = _redirectStdin ?  Encoding.UTF8 : null
             };
@@ -128,7 +128,12 @@ namespace Pggy.Cli.Infrastructure
                 _process.ErrorDataReceived += OnProcessErrorReceived;
             }
 
-            _process.Start();
+            bool hasStarted = _process.Start();
+
+            if (!hasStarted)
+            {
+                throw new ApplicationException($"Process [{_path}] failed to start.");
+            }
 
             return _process;
         }

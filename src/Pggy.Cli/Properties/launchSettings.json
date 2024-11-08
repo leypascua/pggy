@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Pggy.Cli": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "backup --src hp_muppet_reports_app_dev --dest \"./backups/hp_muppet_reports_app_dev\" --compression br --keep-last 5"
     }
   }
 }

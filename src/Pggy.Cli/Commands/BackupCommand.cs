@@ -6,6 +6,7 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
 using System.Text;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Pggy.Cli.Commands
@@ -25,11 +26,13 @@ namespace Pggy.Cli.Commands
                 var srcOpt = new Option<string>("--src", "A Npgsql connection string (or name of connection in the ConnectionStrings section of the config file) of the source db");
                 var destOpt = new Option<string>("--dest", "The destination path of the resulting DB dump file that can be used with the psql CLI.");
                 var compOpt = new Option<CompressionMethod>("--compression", "[gz | br] Optional. The compression method ([gz]ip or [br]otli to use. Use [br]otli for best results");
+                var keepLastOpt = new Option<int>("--keep-last", () => Inputs.DEFAULT_BACKUPS_TO_KEEP, "[number] Optional. Previous backups to keep, default is 20.");
                 compOpt.SetDefaultValue("gz");
 
                 backup.AddOption(srcOpt);
                 backup.AddOption(destOpt);
                 backup.AddOption(compOpt);
+                backup.AddOption(keepLastOpt);
 
                 backup.SetHandler(async (context) =>
                 {
@@ -38,6 +41,7 @@ namespace Pggy.Cli.Commands
                         SourceDb = context.ParseResult.GetValueForOption(srcOpt),
                         DestPath = context.ParseResult.GetValueForOption(destOpt),
                         CompressionMethod = context.ParseResult.GetValueForOption(compOpt),
+                        BackupsToKeep = context.ParseResult.GetValueForOption(keepLastOpt),
                     };
 
                     context.ExitCode = await Execute(inputs, sp.GetService<IConfiguration>(), context.Console);
@@ -67,11 +71,8 @@ namespace Pggy.Cli.Commands
                 return ExitCodes.Error;
             }
 
-            var pgDump = Postgres.Run
-                .PgDump(csb, config);
-
             string ext = inputs.CompressionMethod.ToString().ToLowerInvariant();
-            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddTHHmm")}.sql.{ext}";
+            string filename = $"{csb.Database}.{DateTime.UtcNow.ToString("yyyyMMddTHHmmss")}.sql.{ext}";
             string dumpDir = GetValidDestinationPath(inputs.DestPath);
             string finalDumpPath = Path.Combine(dumpDir, filename);
 
@@ -79,11 +80,15 @@ namespace Pggy.Cli.Commands
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-
             using (FileStream outStream = File.Create(finalDumpPath))
             using (var packageStream = PackageStream.CreateWith(outStream))
-            using (var process = pgDump.Start())
             {
+                var pgDump = Postgres.Run
+                    .PgDump(csb, config)
+                    .SetStdErr(console.Error);
+
+                var process = pgDump.Start();
+
                 var charBuffer = new char[Constants.PGDUMP_READ_BUFFER_SIZE];
 
                 while (!process.HasExited)
@@ -96,8 +101,10 @@ namespace Pggy.Cli.Commands
                         await packageStream.FlushAsync();
                     }
                 }
-                
+
                 packageStream.Close();
+                
+                PruneOldBackups(csb.Database, finalDumpPath, inputs.BackupsToKeep, console);
 
                 if (process.ExitCode != ExitCodes.Success)
                 {
@@ -109,6 +116,34 @@ namespace Pggy.Cli.Commands
 
             console.WriteLine($"\r\nDone after {stopwatch.Elapsed.Humanize()}");
             return ExitCodes.Success;
+        }
+
+        private static void PruneOldBackups(string databaseName, string finalDumpPath, int backupsToKeep, IConsole console)
+        {
+            var dumpDir = new DirectoryInfo(Path.GetDirectoryName(finalDumpPath));
+            if (!dumpDir.Exists) return;
+
+            string matchPattern = $"{databaseName}.*.sql{Path.GetExtension(finalDumpPath)}";
+            
+            var files = dumpDir.EnumerateFiles(matchPattern)
+                .OrderByDescending(f => f.CreationTimeUtc)
+                .ToList();
+
+            if (files.Count > backupsToKeep)
+            {
+                console.WriteLine("  > Pruning old backups...");
+            }
+
+            for (int idx = 0; idx < files.Count; idx++)
+            {
+                var file = files[idx];
+                if (file.FullName == finalDumpPath) continue;
+
+                if (idx > backupsToKeep)
+                {
+                    file.Delete();
+                }
+            }
         }
 
         private static string GetValidDestinationPath(string path)
@@ -152,9 +187,12 @@ namespace Pggy.Cli.Commands
 
         public class Inputs
         {
+            public const int DEFAULT_BACKUPS_TO_KEEP = 20;
+
             public string SourceDb { get; set; }
             public string DestPath { get; set; }
             public CompressionMethod CompressionMethod { get; set; }
+            public int BackupsToKeep { get; set; }
         }
     }
 }
