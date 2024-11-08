@@ -116,27 +116,60 @@ namespace Pggy.Cli.Commands
 
             await destDb.DropAndCreateDatabase(console, inputs.IsForced);
 
-            using (var pgDumpPid = pgDump.Start())
-            using (var psqlPid = psql.Start())
-            using (var dumpFile = new PgDumpFile(sourceDb.Database, inputs.DumpPath))
+            Process pgDumpPid = null;
+            Process psqlPid = null;
+
+            try
             {
-                var charBuffer = new char[Constants.PGDUMP_READ_BUFFER_SIZE];
-                int charsRead = 0;
+                pgDumpPid = pgDump.Start();
+                psqlPid = psql.Start();
 
-                while ((charsRead = await pgDumpPid.StandardOutput.ReadAsync(charBuffer, 0, charBuffer.Length)) > 0)
+                using (var dumpFile = new PgDumpFile(sourceDb.Database, inputs.DumpPath))
                 {
-                    if (psqlPid.HasExited)
-                    {
-                        console.Error.WriteLine($"PSQL process terminated unexpectedly.");
-                        return psqlPid.ExitCode;
-                    }
+                    var charBuffer = new char[Constants.PGDUMP_READ_BUFFER_SIZE];
+                    int charsRead = 0;
 
-                    await psqlPid.StandardInput.WriteAsync(charBuffer, 0, charsRead);
-                    await dumpFile.WriteAsync(charBuffer, 0, charsRead);
+                    while ((charsRead = await pgDumpPid.StandardOutput.ReadAsync(charBuffer, 0, charBuffer.Length)) > 0)
+                    {
+                        if (psqlPid.HasExited)
+                        {
+                            console.Error.WriteLine($"PSQL process terminated unexpectedly.");
+                            return psqlPid.ExitCode;
+                        }
+
+                        await psqlPid.StandardInput.WriteAsync(charBuffer, 0, charsRead);
+                        await dumpFile.WriteAsync(charBuffer, 0, charsRead);
+                    }
                 }
+
+                if (!psqlPid.HasExited)
+                {
+                    await psqlPid.StandardInput.WriteLineAsync("\\q");
+                }
+            }
+            finally
+            {
+                KillAndDispose(pgDumpPid);
+                KillAndDispose(psqlPid);
             }
 
             return await ValueTask.FromResult(ExitCodes.Success);
+        }
+
+        private static void KillAndDispose(Process process)
+        {
+            try
+            {
+                if (process != null && !process.HasExited)
+                {
+                    process.Kill();
+                }
+            }
+            catch { }
+            finally
+            {
+                process.Dispose();
+            }
         }
 
         private static async Task<int> CopyWithTemplate(NpgsqlConnectionStringBuilder sourceDb, NpgsqlConnectionStringBuilder destDb, Inputs inputs, IConfiguration config, IConsole console)
