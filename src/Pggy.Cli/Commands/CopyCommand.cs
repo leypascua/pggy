@@ -98,7 +98,7 @@ namespace Pggy.Cli.Commands
                 await CopyWithTemplate(sourceDb, destDb, inputs, config, console) :
                 await CopyWithPgDump(sourceDb, destDb, inputs, config, console);
 
-            console.WriteLine($"\r\nDone after {stopwatch.Elapsed.Humanize()}");
+            console.WriteLine($"\r\nDone after {stopwatch.Elapsed.Humanize()}\r\n");
             return exitCode;
         }
 
@@ -121,6 +121,8 @@ namespace Pggy.Cli.Commands
 
             try
             {
+
+                console.WriteLine("  > Starting pg_dump...");
                 pgDumpPid = pgDump.Start();
                 psqlPid = psql.Start();
 
